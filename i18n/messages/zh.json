@@ -1,0 +1,144 @@
+{
+  "LanguageDetection": {
+    "title": "语言建议",
+    "description": "检测到你的浏览器语言和当前语言不一样，你随时都可切换语言。",
+    "countdown": "将在 {countdown} 秒后关闭",
+    "switchTo": "切换到"
+  },
+  "Header": {
+    "links": [
+      {
+        "name": "扫描",
+        "href": "#scanner"
+      },
+      {
+        "name": "生成",
+        "href": "#generator"
+      },
+      {
+        "name": "类型",
+        "href": "#qr-code-types"
+      },
+      {
+        "name": "批量",
+        "href": "#batch"
+      },
+      {
+        "name": "FAQ",
+        "href": "#faq"
+      }
+    ]
+  },
+  "Footer": {
+    "Copyright": "版权所有 © {year} {name} 保留所有权利。",
+    "PrivacyPolicy": "隐私政策",
+    "TermsOfService": "服务条款",
+    "Links": {
+      "groups": [
+        {
+          "title": "语言",
+          "links": [
+            {
+              "href": "/en",
+              "name": "English",
+              "useA": true
+            },
+            {
+              "href": "/zh",
+              "name": "中文",
+              "useA": true
+            },
+            {
+              "href": "/ja",
+              "name": "日本語",
+              "useA": true
+            }
+          ]
+        },
+        {
+          "title": "工具",
+          "links": [
+            {
+              "href": "#scanner",
+              "name": "扫描二维码图片"
+            },
+            {
+              "href": "#generator",
+              "name": "生成二维码图片"
+            },
+            {
+              "href": "#batch",
+              "name": "批量导出"
+            }
+          ]
+        },
+        {
+          "title": "资源",
+          "links": [
+            {
+              "href": "#qr-code-types",
+              "name": "二维码类型"
+            },
+            {
+              "href": "#features",
+              "name": "功能"
+            },
+            {
+              "href": "#faq",
+              "name": "FAQ"
+            }
+          ]
+        }
+      ]
+    },
+    "Newsletter": {
+      "title": "订阅我们的邮件",
+      "description": "获取二维码图片扫描和生成工具更新",
+      "defaultErrorMessage": "请输入有效的邮箱地址",
+      "successMessage": "订阅成功",
+      "errorMessage": "订阅失败",
+      "errorMessage2": "订阅失败，请稍后再试",
+      "subscribe": "订阅",
+      "subscribing": "订阅中",
+      "subscribed": "订阅成功！感谢您的关注。"
+    }
+  },
+  "Home": {
+    "title": "QR Code Image",
+    "tagLine": "在线扫描和生成二维码图片",
+    "description": "从截图扫描二维码图片，从 URL 或文本生成二维码图片，并下载 PNG、JPG、SVG 或 ZIP 文件。"
+  },
+  "Blog": {
+    "title": "博客列表",
+    "description": "博客列表"
+  },
+  "About": {
+    "title": "关于",
+    "description": "关于网站"
+  },
+  "TermsOfService": {
+    "title": "服务条款",
+    "description": "服务条款"
+  },
+  "PrivacyPolicy": {
+    "title": "隐私政策",
+    "description": "隐私政策"
+  },
+  "Showcase": {
+    "title": "使用案例展示",
+    "description": "探索使用本 Next.js 启动模板构建的优秀产品和网站。",
+    "visitSite": "访问网站"
+  },
+  "Submission": {
+    "badge": "获得展示",
+    "title": "提交您的产品",
+    "description": "用这套模板构建了出色的产品？与我们的社区分享您的作品，并在展示区获得曝光。",
+    "productNameLabel": "产品名称",
+    "productNamePlaceholder": "我的优秀项目",
+    "productUrlLabel": "产品链接",
+    "submit": "提交产品",
+    "submitting": "提交中...",
+    "successMessage": "感谢您的提交！我们会尽快审核。",
+    "errorMessage": "出了点问题，请重试。"
+  }
+}

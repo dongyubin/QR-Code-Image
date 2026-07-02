@@ -1,0 +1,144 @@
+{
+  "LanguageDetection": {
+    "title": "言語の提案",
+    "description": "ブラウザの言語設定が現在のサイト言語と異なっています。いつでも言語を切り替えることができます。",
+    "countdown": "閉じるまで {countdown} 秒",
+    "switchTo": "に切り替える"
+  },
+  "Header": {
+    "links": [
+      {
+        "name": "スキャン",
+        "href": "#scanner"
+      },
+      {
+        "name": "作成",
+        "href": "#generator"
+      },
+      {
+        "name": "タイプ",
+        "href": "#qr-code-types"
+      },
+      {
+        "name": "一括",
+        "href": "#batch"
+      },
+      {
+        "name": "FAQ",
+        "href": "#faq"
+      }
+    ]
+  },
+  "Footer": {
+    "Copyright": "Copyright © {year} {name} All rights reserved.",
+    "PrivacyPolicy": "プライバシーポリシー",
+    "TermsOfService": "利用規約",
+    "Links": {
+      "groups": [
+        {
+          "title": "言語",
+          "links": [
+            {
+              "href": "/en",
+              "name": "English",
+              "useA": true
+            },
+            {
+              "href": "/zh",
+              "name": "中文",
+              "useA": true
+            },
+            {
+              "href": "/ja",
+              "name": "日本語",
+              "useA": true
+            }
+          ]
+        },
+        {
+          "title": "ツール",
+          "links": [
+            {
+              "href": "#scanner",
+              "name": "QR画像をスキャン"
+            },
+            {
+              "href": "#generator",
+              "name": "QR画像を作成"
+            },
+            {
+              "href": "#batch",
+              "name": "一括エクスポート"
+            }
+          ]
+        },
+        {
+          "title": "リソース",
+          "links": [
+            {
+              "href": "#qr-code-types",
+              "name": "QRコードタイプ"
+            },
+            {
+              "href": "#features",
+              "name": "機能"
+            },
+            {
+              "href": "#faq",
+              "name": "FAQ"
+            }
+          ]
+        }
+      ]
+    },
+    "Newsletter": {
+      "title": "QR Code Image ニュースレター",
+      "description": "QRコード画像のスキャン・作成ツールに関する更新情報を受け取れます。",
+      "defaultErrorMessage": "有効なメールアドレスを入力してください。",
+      "successMessage": "登録が完了しました。",
+      "errorMessage": "登録に失敗しました。",
+      "errorMessage2": "登録に失敗しました。少し待ってから再試行してください。",
+      "subscribe": "登録する",
+      "subscribing": "登録中...",
+      "subscribed": "登録が完了しました。ありがとうございます。"
+    }
+  },
+  "Home": {
+    "title": "QR Code Image",
+    "tagLine": "オンラインでQRコード画像をスキャン・作成",
+    "description": "スクリーンショットからQRコード画像を読み取り、URLやテキストからQRコード画像を作成し、PNG、JPG、SVG、ZIP形式でダウンロードできます。"
+  },
+  "Blog": {
+    "title": "ブログ一覧",
+    "description": "ブログ投稿の一覧"
+  },
+  "About": {
+    "title": "サイトについて",
+    "description": "サイトについて"
+  },
+  "TermsOfService": {
+    "title": "サービス利用規約",
+    "description": "サービス利用規約"
+  },
+  "PrivacyPolicy": {
+    "title": "プライバシーポリシー",
+    "description": "プライバシーポリシー"
+  },
+  "Showcase": {
+    "title": "活用シーン",
+    "description": "QRコード画像のスキャン、作成、ダウンロードに使える代表的なワークフローです。",
+    "visitSite": "詳細を見る"
+  },
+  "Submission": {
+    "badge": "フィードバック",
+    "title": "改善リクエストを送信",
+    "description": "QRコード画像ツールに追加してほしい機能や改善点を送信できます。",
+    "productNameLabel": "内容",
+    "productNamePlaceholder": "追加してほしい機能",
+    "productUrlLabel": "参考URL",
+    "submit": "送信",
+    "submitting": "送信中...",
+    "successMessage": "ありがとうございます！提出を受け付けました。まもなく確認いたします。",
+    "errorMessage": "エラーが発生しました。もう一度お試しください。"
+  }
+}
