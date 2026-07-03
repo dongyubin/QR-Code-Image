@@ -24,6 +24,10 @@
         "href": "#batch"
       },
       {
+        "name": "博客",
+        "href": "/blog"
+      },
+      {
         "name": "FAQ",
         "href": "#faq"
       }
@@ -109,8 +113,8 @@
     "description": "从截图扫描二维码图片，从 URL 或文本生成二维码图片，并下载 PNG、JPG、SVG 或 ZIP 文件。"
   },
   "Blog": {
-    "title": "博客列表",
-    "description": "博客列表"
+    "title": "二维码图片指南",
+    "description": "关于二维码图片生成、扫描、下载和测试的实用指南。"
   },
   "About": {
     "title": "关于",

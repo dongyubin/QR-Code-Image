@@ -24,6 +24,10 @@
         "href": "#batch"
       },
       {
+        "name": "ブログ",
+        "href": "/blog"
+      },
+      {
         "name": "FAQ",
         "href": "#faq"
       }
@@ -109,8 +113,8 @@
     "description": "スクリーンショットからQRコード画像を読み取り、URLやテキストからQRコード画像を作成し、PNG、JPG、SVG、ZIP形式でダウンロードできます。"
   },
   "Blog": {
-    "title": "ブログ一覧",
-    "description": "ブログ投稿の一覧"
+    "title": "QRコード画像ガイド",
+    "description": "QRコード画像の作成、読み取り、ダウンロード、テストに関する実用ガイド。"
   },
   "About": {
     "title": "サイトについて",

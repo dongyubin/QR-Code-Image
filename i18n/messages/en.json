@@ -24,6 +24,10 @@
         "href": "#batch"
       },
       {
+        "name": "Blog",
+        "href": "/blog"
+      },
+      {
         "name": "FAQ",
         "href": "#faq"
       }
@@ -109,8 +113,8 @@
     "description": "Scan QR code images from screenshots, create QR code images from URLs or text, and download PNG, JPG, SVG, or ZIP files."
   },
   "Blog": {
-    "title": "Blog Posts",
-    "description": "A list of blog posts"
+    "title": "QR Code Image Guides",
+    "description": "Guides for creating, scanning, downloading, and testing QR code images."
   },
   "About": {
     "title": "About",
