@@ -1,14 +1,18 @@
 "use client"
 
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { qrFaqs, qrFeatures, qrUseCases } from '@/lib/qr-content'
 import {
   QrContentLineType,
   QrFinderShape,
+  QrMarkerBorderShape,
+  QrMarkerCenterShape,
   QrModuleShape,
   QrPositioningPointType,
   QrStylePreset,
   renderStyledQrCode,
+  renderStyledQrCodeAsync,
   StyledQrStyle
 } from '@/lib/styled-qr'
 import {
@@ -18,10 +22,14 @@ import {
   Clipboard,
   Download,
   FileArchive,
+  FileText,
   FileImage,
   ImagePlus,
+  Info,
   Link2,
   Loader2,
+  Palette,
+  Printer,
   QrCode,
   ScanLine,
   Square,
@@ -31,7 +39,7 @@ import {
 import { useLocale } from 'next-intl'
 import { ChangeEvent, DragEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-type DownloadFormat = 'png' | 'jpg' | 'svg'
+type DownloadFormat = 'png' | 'jpg' | 'svg' | 'pdf'
 type ToolTab = 'scan' | 'create' | 'batch'
 type XMode = 'profile' | 'post' | 'share'
 type QrTemplateId =
@@ -93,7 +101,14 @@ const defaultStyle: StyledQrStyle = {
   positioningPointColor: '#111827',
   contentStrokeWidth: 0.7,
   contentXStrokeWidth: 0.7,
-  positioningStrokeWidth: 0.9
+  positioningStrokeWidth: 0.9,
+  imageFusionEnabled: false,
+  fusionBrightness: 0,
+  fusionContrast: 0.35,
+  fusionFunctionalPattern: 'clean',
+  fusionQuality: 'sharp',
+  fusionImageMode: 'auto',
+  fusionImageStrength: 0.72
 }
 
 const examples = [
@@ -109,6 +124,30 @@ const palettes = [
   ['#6b2d1f', '#fff5ec'],
   ['#0b3158', '#eef7ff'],
   ['#3f2b56', '#fff9db']
+]
+
+const downloadSizeOptions = [512, 900, 1200, 2000]
+const showImageToQrSection = false
+const patternOptions: Array<{ value: QrModuleShape; label: string }> = [
+  { value: 'square', label: 'Square' },
+  { value: 'rounded', label: 'Rounded' },
+  { value: 'dot', label: 'Dot' },
+  { value: 'line', label: 'Line' },
+  { value: 'cross', label: 'Cross' }
+]
+const markerBorderOptions: Array<{ value: QrMarkerBorderShape; label: string }> = [
+  { value: 'square', label: 'Square' },
+  { value: 'rounded', label: 'Rounded' },
+  { value: 'circle', label: 'Circle' },
+  { value: 'planet', label: 'Planet' },
+  { value: 'bracket', label: 'Bracket' },
+  { value: 'dsj', label: 'DSJ' }
+]
+const markerCenterOptions: Array<{ value: QrMarkerCenterShape; label: string }> = [
+  { value: 'square', label: 'Square' },
+  { value: 'rounded', label: 'Rounded' },
+  { value: 'circle', label: 'Circle' },
+  { value: 'dot', label: 'Dot' }
 ]
 
 const stylePresets: Array<{
@@ -299,6 +338,43 @@ const stylePresets: Array<{
       }
     },
     {
+      id: 'image-fusion',
+      label: 'Image Fusion',
+      description: 'Blend a local image into QR particles with protected scan patterns.',
+      tag: 'Fusion',
+      values: {
+        dark: '#17201d',
+        light: '#ffffff',
+        margin: 3,
+        width: 900,
+        errorCorrectionLevel: 'H',
+        stylePreset: 'image-fusion',
+        moduleShape: 'square',
+        moduleScale: 0.95,
+        moduleRadius: 0.18,
+        finderShape: 'square',
+        finderColor: '#17201d',
+        accentColor: '#b84a2b',
+        moduleOpacity: 1,
+        qrbtfFamily: 'c2',
+        contentPointType: 'square',
+        contentLineType: 'interlock',
+        positioningPointType: 'square',
+        contentPointColor: '#17201d',
+        positioningPointColor: '#17201d',
+        contentStrokeWidth: 0.7,
+        contentXStrokeWidth: 0.7,
+        positioningStrokeWidth: 0.9,
+        imageFusionEnabled: true,
+        fusionBrightness: 0,
+        fusionContrast: 0.35,
+        fusionFunctionalPattern: 'clean',
+        fusionQuality: 'sharp',
+        fusionImageMode: 'auto',
+        fusionImageStrength: 0.72
+      }
+    },
+    {
       id: 'rounded-ink',
       label: 'Rounded Ink',
       description: 'Friendly rounded modules with strong contrast.',
@@ -441,6 +517,10 @@ const qrTemplates: Array<{
     }
   ]
 
+const primaryCreateTemplateIds: QrTemplateId[] = ['url', 'text', 'wifi', 'email', 'phone', 'image', 'twitter']
+const primaryCreateTemplates = qrTemplates.filter((template) => primaryCreateTemplateIds.includes(template.id))
+const secondaryCreateTemplates = qrTemplates.filter((template) => !primaryCreateTemplateIds.includes(template.id))
+
 const qrTypeCards: Array<{
   id: QrTemplateId
   label: string
@@ -581,7 +661,7 @@ const toolTabs: Array<{
 
 export default function QrCodeImageTool() {
   const locale = useLocale()
-  const [activeTab, setActiveTab] = useState<ToolTab>('scan')
+  const [activeTab, setActiveTab] = useState<ToolTab>('create')
   const [activeTemplate, setActiveTemplate] = useState<QrTemplateId>('url')
   const [randomType, setRandomType] = useState<RandomQrType>('url')
   const [data, setData] = useState('https://example.com')
@@ -613,6 +693,7 @@ export default function QrCodeImageTool() {
   const [isTestingQr, setIsTestingQr] = useState(false)
   const [qrSelfTestResult, setQrSelfTestResult] = useState<QrSelfTestResult>(null)
   const [realReadability, setRealReadability] = useState<ReadabilityScore | null>(null)
+  const [downloadStatus, setDownloadStatus] = useState('')
   const batchItems = batchInput
     .split('\n')
     .map((item) => item.trim())
@@ -634,6 +715,14 @@ export default function QrCodeImageTool() {
     ? getTestingReadabilityScore(fallbackReadability)
     : realReadability ?? fallbackReadability
   const showReadabilityTools = false
+  const genericInputCopy = getQrInputCopy(activeTemplate)
+  useEffect(() => {
+    if (!downloadStatus) return
+
+    const timer = window.setTimeout(() => setDownloadStatus(''), 2400)
+    return () => window.clearTimeout(timer)
+  }, [downloadStatus])
+
   useEffect(() => {
     if (activeTemplate === 'wifi') {
       setData(buildWifiPayload(wifiSsid, wifiPassword, wifiEncryption, wifiHidden))
@@ -658,7 +747,7 @@ export default function QrCodeImageTool() {
 
       setIsGenerating(true)
       try {
-        const nextQr = renderStyledQrCode(data, style)
+        const nextQr = await renderStyledQrCodeAsync(data, style)
 
         if (!active) return
         setPreviewUrl(nextQr.svgDataUrl)
@@ -849,12 +938,27 @@ export default function QrCodeImageTool() {
     const preset = stylePresets.find((item) => item.id === presetId)
     if (!preset) return
 
-    setStyle({ ...preset.values, moduleRenderMode: 'preset' })
+    setStyle((current) => ({
+      ...preset.values,
+      moduleRenderMode: 'preset',
+      imageFusionEnabled: preset.id === 'image-fusion' ? true : current.imageFusionEnabled,
+      fusionImageDataUrl: current.fusionImageDataUrl,
+      fusionBrightness: preset.id === 'image-fusion' ? preset.values.fusionBrightness : current.fusionBrightness,
+      fusionContrast: preset.id === 'image-fusion' ? preset.values.fusionContrast : current.fusionContrast,
+      fusionFunctionalPattern: preset.id === 'image-fusion' ? preset.values.fusionFunctionalPattern : current.fusionFunctionalPattern,
+      fusionQuality: preset.id === 'image-fusion' ? preset.values.fusionQuality : current.fusionQuality,
+      fusionImageMode: preset.id === 'image-fusion' ? preset.values.fusionImageMode : current.fusionImageMode,
+      fusionImageStrength: preset.id === 'image-fusion' ? preset.values.fusionImageStrength : current.fusionImageStrength
+    }))
   }
 
   function resetCurrentStyle() {
     const preset = stylePresets.find((item) => item.id === style.stylePreset)
-    setStyle({ ...(preset?.values ?? defaultStyle), moduleRenderMode: 'preset' })
+    setStyle((current) => ({
+      ...(preset?.values ?? defaultStyle),
+      moduleRenderMode: 'preset',
+      fusionImageDataUrl: current.fusionImageDataUrl
+    }))
   }
 
   function randomizeStyle() {
@@ -863,6 +967,10 @@ export default function QrCodeImageTool() {
     setStyle({
       ...preset.values,
       moduleRenderMode: 'preset',
+      imageFusionEnabled: preset.id === 'image-fusion' ? true : style.imageFusionEnabled,
+      fusionImageDataUrl: style.fusionImageDataUrl,
+      fusionImageMode: style.fusionImageMode,
+      fusionImageStrength: style.fusionImageStrength,
       dark,
       finderColor: dark,
       contentPointColor: dark,
@@ -874,11 +982,24 @@ export default function QrCodeImageTool() {
     })
   }
 
+  function updateDownloadSize(value: string) {
+    if (!value.trim()) return
+
+    const nextSize = Number(value)
+    if (!Number.isFinite(nextSize)) return
+
+    setStyle((current) => ({
+      ...current,
+      width: Math.min(2000, Math.max(1, Math.round(nextSize)))
+    }))
+  }
+
   function download(format: DownloadFormat) {
-    const name = `qr-code-image.${format}`
+    const name = getDownloadFileName(format, activeTemplate, style.width)
 
     if (format === 'svg') {
       downloadBlob(new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' }), name)
+      setDownloadStatus('SVG downloaded')
       return
     }
 
@@ -887,7 +1008,41 @@ export default function QrCodeImageTool() {
       return
     }
 
+    if (format === 'pdf') {
+      downloadPdf(name)
+      return
+    }
+
     downloadRasterImage('jpg', name)
+  }
+
+  async function downloadPdf(fileName: string) {
+    if (!svgText) return
+
+    try {
+      const canvas = await renderSvgToCanvas(svgText, style.width, style.light)
+      const imageData = canvas.toDataURL('image/png')
+      const { jsPDF } = await import('jspdf')
+      const pageSize = 180
+      const pageMargin = 12
+      const imageSize = pageSize - pageMargin * 2
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: [pageSize, pageSize],
+        putOnlyUsedFonts: true
+      })
+
+      pdf.addImage(imageData, 'PNG', pageMargin, pageMargin, imageSize, imageSize)
+      pdf.save(fileName)
+      setDownloadStatus('PDF downloaded')
+    } catch {
+      setQrSelfTestResult({
+        status: 'error',
+        title: qrSelfTestCopy.notDetectedTitle,
+        message: qrSelfTestCopy.renderFailed
+      })
+    }
   }
 
   async function downloadRasterImage(format: 'png' | 'jpg', fileName: string) {
@@ -897,10 +1052,88 @@ export default function QrCodeImageTool() {
       const canvas = await renderSvgToCanvas(svgText, style.width, style.light)
       const mime = format === 'png' ? 'image/png' : 'image/jpeg'
       downloadHref(canvas.toDataURL(mime, 0.92), fileName)
+      setDownloadStatus(`${format.toUpperCase()} downloaded`)
     } catch {
       setQrSelfTestResult({
         status: 'error',
         title: qrSelfTestCopy.notDetectedTitle,
+        message: qrSelfTestCopy.renderFailed
+      })
+    }
+  }
+
+  async function printQrImage() {
+    if (!svgText) return
+
+    try {
+      const canvas = await renderSvgToCanvas(svgText, style.width, style.light)
+      const imageData = canvas.toDataURL('image/png')
+      const printWindow = window.open('', '_blank', 'width=720,height=760')
+
+      if (!printWindow) {
+        setQrSelfTestResult({
+          status: 'error',
+          title: 'Print could not start',
+          message: 'Allow pop-ups for this page and try printing again.'
+        })
+        return
+      }
+
+      printWindow.document.write(`<!doctype html>
+<html>
+  <head>
+    <title>QR Code Image</title>
+    <style>
+      @page { margin: 16mm; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        font-family: Arial, sans-serif;
+        color: #17201d;
+        background: #ffffff;
+      }
+      main {
+        display: grid;
+        gap: 16px;
+        justify-items: center;
+        text-align: center;
+      }
+      h1 {
+        margin: 0;
+        font-size: 18px;
+      }
+      img {
+        width: min(82vw, 160mm);
+        height: auto;
+        display: block;
+      }
+      @media print {
+        body { min-height: auto; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>QR Code Image</h1>
+      <img src="${imageData}" alt="QR Code Image" />
+    </main>
+    <script>
+      window.addEventListener('load', function () {
+        window.focus();
+        window.print();
+      });
+    </script>
+  </body>
+</html>`)
+      printWindow.document.close()
+      setDownloadStatus('Print opened')
+    } catch {
+      setQrSelfTestResult({
+        status: 'error',
+        title: 'Print could not start',
         message: qrSelfTestCopy.renderFailed
       })
     }
@@ -994,6 +1227,32 @@ export default function QrCodeImageTool() {
     event.target.value = ''
   }
 
+  function onFusionImageUpload(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = () => {
+      const fusionImageDataUrl = String(reader.result || '')
+      setStyle((current) => ({
+        ...current,
+        fusionImageDataUrl,
+        imageFusionEnabled: true,
+        errorCorrectionLevel: 'H',
+        margin: Math.max(current.margin, 3)
+      }))
+    }
+    reader.readAsDataURL(file)
+    event.target.value = ''
+  }
+
+  function clearFusionImage() {
+    setStyle((current) => ({
+      ...current,
+      fusionImageDataUrl: undefined
+    }))
+  }
+
   async function downloadBatchZip() {
     const rows = batchInput
       .split('\n')
@@ -1012,7 +1271,7 @@ export default function QrCodeImageTool() {
     try {
       await Promise.all(
         rows.map(async (item, index) => {
-          const svg = renderStyledQrCode(item, style).svgText
+          const svg = (await renderStyledQrCodeAsync(item, style)).svgText
           zip.file(`qr-code-image-${String(index + 1).padStart(2, '0')}.svg`, svg)
         })
       )
@@ -1154,14 +1413,14 @@ export default function QrCodeImageTool() {
                   icon={<QrCode className="h-6 w-6" />}
                   step="02"
                   title="Create QR Code Image"
-                  description="Paste a URL or text, tune the essentials, then download from the preview panel."
+                  description="Choose a QR type, enter content, and preview your QR code image instantly."
                 />
 
                 <div className="mt-4">
                   <div className="mb-2 flex items-end justify-between gap-3">
                     <div>
-                      <h3 className="text-base font-black tracking-normal">QR Code Types</h3>
-                      <p className="text-sm text-[#62736d]">Choose a type, then fill in the details below.</p>
+                      <h3 className="text-base font-black tracking-normal">1. Choose QR type</h3>
+                      <p className="text-sm text-[#62736d]">Start with the QR code image you want to create.</p>
                     </div>
                     {activeTemplate === 'random' && (
                       <Button onClick={() => generateRandomQr(randomType)} variant="outline" className="hidden rounded-md border-[#17201d] sm:inline-flex">
@@ -1171,7 +1430,7 @@ export default function QrCodeImageTool() {
                     )}
                   </div>
                   <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-                    {qrTemplates.map((template) => (
+                    {primaryCreateTemplates.map((template) => (
                       <button
                         key={template.id}
                         type="button"
@@ -1188,10 +1447,35 @@ export default function QrCodeImageTool() {
                       </button>
                     ))}
                   </div>
+                  <div className="mt-3 rounded-md border border-[#d8c9af] bg-white/60 p-3">
+                    <p className="mb-2 text-xs font-black uppercase text-[#62736d]">More QR code types</p>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      {secondaryCreateTemplates.map((template) => (
+                        <button
+                          key={template.id}
+                          type="button"
+                          onClick={() => applyTemplate(template)}
+                          className={`rounded-md border px-3 py-2 text-left transition ${activeTemplate === template.id
+                            ? 'border-[#17201d] bg-[#17201d] text-[#fffaf0]'
+                            : 'border-[#d8c9af] bg-white hover:border-[#17201d]'
+                            }`}
+                        >
+                          <span className="block truncate text-sm font-black">{template.label}</span>
+                          <span className={`block truncate text-xs ${activeTemplate === template.id ? 'text-[#d8c9af]' : 'text-[#62736d]'}`}>
+                            {template.description}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
 
                 {activeTemplate === 'wifi' ? (
                   <div className="mt-4 rounded-md border border-[#d8c9af] bg-white/70 p-4">
+                    <div className="mb-3">
+                      <h3 className="text-base font-black tracking-normal">2. Enter Wi-Fi details</h3>
+                      <p className="text-sm text-[#62736d]">Create a QR code image that lets guests join a network quickly.</p>
+                    </div>
                     <div className="grid gap-3 sm:grid-cols-2">
                       <label className="grid gap-1 text-xs font-black uppercase text-[#62736d]">
                         Network name
@@ -1241,7 +1525,7 @@ export default function QrCodeImageTool() {
                 ) : activeTemplate === 'twitter' ? (
                   <div className="mt-4 rounded-md border border-[#d8c9af] bg-white/70 p-4">
                     <div>
-                      <h3 className="text-base font-black tracking-normal">X link type</h3>
+                      <h3 className="text-base font-black tracking-normal">2. Enter X link details</h3>
                       <p className="text-sm text-[#62736d]">Choose whether the QR opens a profile, a specific post, or a prefilled share composer.</p>
                     </div>
                     <div className="mt-4 grid gap-2 sm:grid-cols-3">
@@ -1359,7 +1643,7 @@ export default function QrCodeImageTool() {
                   <div className="mt-4 rounded-md border border-[#d8c9af] bg-white/70 p-4">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
-                        <h3 className="text-base font-black tracking-normal">Random QR data</h3>
+                        <h3 className="text-base font-black tracking-normal">2. Generate random QR data</h3>
                         <p className="text-sm text-[#62736d]">Choose a QR type, then generate realistic test content for that format.</p>
                       </div>
                       <Button onClick={() => generateRandomQr(randomType)} className="rounded-md bg-[#17201d]">
@@ -1387,8 +1671,9 @@ export default function QrCodeImageTool() {
                 ) : (
                   <>
                     <label className="mt-4 block text-xs font-black uppercase text-[#62736d]" htmlFor="qr-data">
-                      URL or text
+                      2. {genericInputCopy.label}
                     </label>
+                    <p className="mt-1 text-sm text-[#62736d]">{genericInputCopy.helper}</p>
                     <textarea
                       id="qr-data"
                       value={data}
@@ -1417,8 +1702,8 @@ export default function QrCodeImageTool() {
                 <div className="min-w-0 overflow-hidden rounded-md border border-[#d8c9af] bg-white/70 p-4">
                   <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
                     <div>
-                      <h3 className="text-base font-black tracking-normal">Parametric Style</h3>
-                      <p className="text-sm text-[#62736d]">Choose a readable style preset, then tune the QR modules.</p>
+                      <h3 className="text-base font-black tracking-normal">Style your QR code image</h3>
+                      <p className="text-sm text-[#62736d]">Optional: choose a readable style preset, then tune the QR modules.</p>
                     </div>
                     <span className="rounded-full border border-[#d8c9af] bg-white px-3 py-1 text-xs font-black text-[#50625b]">
                       {style.errorCorrectionLevel} recovery
@@ -1479,9 +1764,21 @@ export default function QrCodeImageTool() {
                     />
                     <ColorField label="Background color" value={style.light} onChange={(light) => setStyle((current) => ({ ...current, light }))} />
                     <ColorField
-                      label="Position marker color"
-                      value={style.positioningPointColor ?? style.finderColor}
-                      onChange={(positionMarkerColor) => setStyle((current) => ({ ...current, finderColor: positionMarkerColor, positioningPointColor: positionMarkerColor }))}
+                      label="Marker border color"
+                      value={style.markerBorderColor ?? style.positioningPointColor ?? style.finderColor}
+                      onChange={(markerBorderColor) =>
+                        setStyle((current) => ({
+                          ...current,
+                          finderColor: markerBorderColor,
+                          positioningPointColor: markerBorderColor,
+                          markerBorderColor
+                        }))
+                      }
+                    />
+                    <ColorField
+                      label="Marker center color"
+                      value={style.markerCenterColor ?? style.markerBorderColor ?? style.positioningPointColor ?? style.finderColor}
+                      onChange={(markerCenterColor) => setStyle((current) => ({ ...current, markerCenterColor }))}
                     />
                     <ColorField label="Accent color" value={style.accentColor} onChange={(accentColor) => setStyle((current) => ({ ...current, accentColor }))} />
                     <label className="grid gap-1 text-xs font-black uppercase text-[#62736d]">
@@ -1503,41 +1800,6 @@ export default function QrCodeImageTool() {
                       </select>
                     </label>
                     <label className="grid gap-1 text-xs font-black uppercase text-[#62736d]">
-                      Module shape
-                      <select
-                        value={style.moduleShape}
-                        onChange={(event) => setStyle((current) => syncStyleForModuleShape(current, event.target.value as QrModuleShape))}
-                        className="h-10 rounded-md border-2 border-[#17201d] bg-white px-3"
-                      >
-                        <option value="square">Square</option>
-                        <option value="rounded">Rounded</option>
-                        <option value="dot">Dot</option>
-                        <option value="line">Line</option>
-                        <option value="cross">Cross</option>
-                      </select>
-                    </label>
-                    <label className="grid gap-1 text-xs font-black uppercase text-[#62736d]">
-                      Position marker shape
-                      <select
-                        value={style.positioningPointType ?? finderShapeToPositioning(style.finderShape)}
-                        onChange={(event) => {
-                          const positioningPointType = event.target.value as QrPositioningPointType
-                          setStyle((current) => ({
-                            ...current,
-                            positioningPointType,
-                            finderShape: positioningToFinderShape(positioningPointType)
-                          }))
-                        }}
-                        className="h-10 rounded-md border-2 border-[#17201d] bg-white px-3"
-                      >
-                        <option value="square">Square</option>
-                        <option value="circle">Circle</option>
-                        <option value="planet">Planet</option>
-                        <option value="rounded">Rounded</option>
-                        <option value="dsj">DSJ</option>
-                      </select>
-                    </label>
-                    <label className="grid gap-1 text-xs font-black uppercase text-[#62736d]">
                       Quiet zone
                       <input
                         type="number"
@@ -1545,18 +1807,6 @@ export default function QrCodeImageTool() {
                         max={8}
                         value={style.margin}
                         onChange={(event) => setStyle((current) => ({ ...current, margin: Number(event.target.value) }))}
-                        className="h-10 rounded-md border-2 border-[#17201d] bg-white px-3"
-                      />
-                    </label>
-                    <label className="grid gap-1 text-xs font-black uppercase text-[#62736d]">
-                      Image size
-                      <input
-                        type="number"
-                        min={256}
-                        max={2000}
-                        step={64}
-                        value={style.width}
-                        onChange={(event) => setStyle((current) => ({ ...current, width: Number(event.target.value) }))}
                         className="h-10 rounded-md border-2 border-[#17201d] bg-white px-3"
                       />
                     </label>
@@ -1584,6 +1834,45 @@ export default function QrCodeImageTool() {
                         <option value="cross">Cross</option>
                       </select>
                     </label>
+                  </div>
+
+                  <div className="mt-4 grid gap-4">
+                    <VisualChoiceGroup
+                      label="Pattern"
+                      description="Controls the regular QR data modules."
+                      options={patternOptions}
+                      value={style.moduleShape}
+                      onChange={(moduleShape) => setStyle((current) => syncStyleForModuleShape(current, moduleShape))}
+                      renderPreview={(option) => <PatternPreview shape={option.value} />}
+                    />
+                    <div className="grid gap-4 xl:grid-cols-2">
+                      <VisualChoiceGroup
+                        label="Marker border"
+                        description="Controls the outer positioning marker shape."
+                        options={markerBorderOptions}
+                        value={style.markerBorderShape ?? positioningToMarkerBorder(style.positioningPointType ?? finderShapeToPositioning(style.finderShape), style.finderShape)}
+                        onChange={(markerBorderShape) => setStyle((current) => syncStyleForMarkerBorder(current, markerBorderShape))}
+                        renderPreview={(option) => (
+                          <MarkerPreview
+                            borderShape={option.value}
+                            centerShape={style.markerCenterShape ?? getDefaultMarkerCenterShape(option.value)}
+                          />
+                        )}
+                      />
+                      <VisualChoiceGroup
+                        label="Marker center"
+                        description="Controls the center point inside the marker."
+                        options={markerCenterOptions}
+                        value={style.markerCenterShape ?? getDefaultMarkerCenterShape(style.markerBorderShape ?? positioningToMarkerBorder(style.positioningPointType ?? finderShapeToPositioning(style.finderShape), style.finderShape))}
+                        onChange={(markerCenterShape) => setStyle((current) => ({ ...current, markerCenterShape }))}
+                        renderPreview={(option) => (
+                          <MarkerPreview
+                            borderShape={style.markerBorderShape ?? positioningToMarkerBorder(style.positioningPointType ?? finderShapeToPositioning(style.finderShape), style.finderShape)}
+                            centerShape={option.value}
+                          />
+                        )}
+                      />
+                    </div>
                   </div>
 
                   <div className="mt-4 grid gap-3 md:grid-cols-3">
@@ -1648,48 +1937,179 @@ export default function QrCodeImageTool() {
                       onChange={(positioningStrokeWidth) => setStyle((current) => ({ ...current, positioningStrokeWidth }))}
                     />
                   </div>
+
+                  <div className="mt-5 border-t border-[#d8c9af] pt-4">
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex items-start gap-2">
+                        <Palette className="mt-0.5 h-5 w-5 text-[#b84a2b]" />
+                        <div>
+                          <h4 className="text-sm font-black tracking-normal">Image Fusion</h4>
+                          <p className="text-xs leading-5 text-[#62736d]">Optionally blend a local background image into the current QR style.</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <label className="inline-flex min-h-9 items-center gap-2 rounded-md border-2 border-[#17201d] bg-white px-3 text-xs font-black">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(style.imageFusionEnabled)}
+                            onChange={(event) => setStyle((current) => ({ ...current, imageFusionEnabled: event.target.checked }))}
+                            className="h-4 w-4 accent-[#17201d]"
+                          />
+                          Enable image fusion
+                        </label>
+                        <label className="inline-flex min-h-9 cursor-pointer items-center justify-center rounded-md border-2 border-[#17201d] bg-white px-3 text-xs font-black shadow-[3px_3px_0_#17201d]">
+                          Background image
+                          <input type="file" accept="image/png,image/jpeg,image/webp,image/*" onChange={onFusionImageUpload} hidden />
+                        </label>
+                        {style.fusionImageDataUrl && (
+                          <Button type="button" variant="outline" size="sm" className="rounded-md border-[#17201d]" onClick={clearFusionImage}>
+                            Clear image
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+                      <div className="grid min-h-32 min-w-0 place-items-center overflow-hidden rounded-md border-2 border-[#17201d] bg-white p-2">
+                        {style.fusionImageDataUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={style.fusionImageDataUrl} alt="Image Fusion background preview" className={`h-32 w-full rounded-sm object-contain ${style.imageFusionEnabled ? '' : 'opacity-45 grayscale'}`} />
+                        ) : (
+                          <div className="grid h-32 w-full place-items-center rounded-sm border border-dashed border-[#d8c9af] px-4 text-center text-xs font-bold leading-5 text-[#62736d]">
+                            Upload an image to add fusion texture to any QR style.
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="grid min-w-0 gap-3 [grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]">
+                        <RangeField
+                          label="Image brightness"
+                          value={style.fusionBrightness ?? 0}
+                          min={-1}
+                          max={1}
+                          step={0.01}
+                          inputStep={0.05}
+                          formatter={(value) => value.toFixed(2)}
+                          onChange={(fusionBrightness) => setStyle((current) => ({ ...current, fusionBrightness }))}
+                        />
+                        <RangeField
+                          label="Image contrast"
+                          value={style.fusionContrast ?? 0.35}
+                          min={-1}
+                          max={1}
+                          step={0.01}
+                          inputStep={0.05}
+                          formatter={(value) => value.toFixed(2)}
+                          onChange={(fusionContrast) => setStyle((current) => ({ ...current, fusionContrast }))}
+                        />
+                        <label className="grid min-w-0 gap-1 text-xs font-black uppercase text-[#62736d]">
+                          Fusion quality
+                          <select
+                            value={style.fusionQuality ?? 'sharp'}
+                            onChange={(event) =>
+                              setStyle((current) => ({
+                                ...current,
+                                fusionQuality: event.target.value as StyledQrStyle['fusionQuality']
+                              }))
+                            }
+                            className="h-10 w-full min-w-0 rounded-md border-2 border-[#17201d] bg-white px-3"
+                          >
+                            <option value="sharp">Sharp - clearer pixels</option>
+                            <option value="soft">Soft - smoother blend</option>
+                            <option value="safe">Safe - stronger scan signal</option>
+                          </select>
+                        </label>
+                        <label className="grid min-w-0 gap-1 text-xs font-black uppercase text-[#62736d]">
+                          Image mode
+                          <select
+                            value={style.fusionImageMode ?? 'auto'}
+                            onChange={(event) =>
+                              setStyle((current) => ({
+                                ...current,
+                                fusionImageMode: event.target.value as StyledQrStyle['fusionImageMode']
+                              }))
+                            }
+                            className="h-10 w-full min-w-0 rounded-md border-2 border-[#17201d] bg-white px-3"
+                          >
+                            <option value="auto">Auto - adapt to image</option>
+                            <option value="tone">Tone - full image texture</option>
+                            <option value="edges">Edges - outline subject</option>
+                            <option value="highlights">Highlights - bright details</option>
+                          </select>
+                        </label>
+                        <RangeField
+                          label="Image strength"
+                          value={style.fusionImageStrength ?? 0.72}
+                          min={0}
+                          max={1}
+                          step={0.01}
+                          inputMode="percent"
+                          formatter={(value) => `${Math.round(value * 100)}%`}
+                          onChange={(fusionImageStrength) => setStyle((current) => ({ ...current, fusionImageStrength }))}
+                        />
+                        <label className="grid min-w-0 gap-1 text-xs font-black uppercase text-[#62736d] [grid-column:1/-1]">
+                          Functional pattern
+                          <select
+                            value={style.fusionFunctionalPattern ?? 'clean'}
+                            onChange={(event) =>
+                              setStyle((current) => ({
+                                ...current,
+                                fusionFunctionalPattern: event.target.value as StyledQrStyle['fusionFunctionalPattern']
+                              }))
+                            }
+                            className="h-10 w-full min-w-0 rounded-md border-2 border-[#17201d] bg-white px-3"
+                          >
+                            <option value="clean">Clean - stronger scanning</option>
+                            <option value="blended">Blended - more visual texture</option>
+                          </select>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <Button variant="outline" className="mt-4 w-full rounded-md border-[#17201d]" onClick={randomizeStyle}>
                   <Wand2 />
-                  Randomize parametric style
+                  Randomize style
                 </Button>
               </article>
 
-              <article id="image-to-qr" className="rounded-md border border-[#d8c9af] bg-white/60 p-4">
-                <PanelHeader
-                  icon={<ImagePlus className="h-6 w-6" />}
-                  step="03"
-                  title="Image To QR Code"
-                  description="Encode a hosted image URL now; add R2 or S3 uploads when the product needs public sharing."
-                />
+              {showImageToQrSection && (
+                <article id="image-to-qr" className="rounded-md border border-[#d8c9af] bg-white/60 p-4">
+                  <PanelHeader
+                    icon={<ImagePlus className="h-6 w-6" />}
+                    step="03"
+                    title="Image To QR Code"
+                    description="Encode a hosted image URL now; add R2 or S3 uploads when the product needs public sharing."
+                  />
 
-                <div className="mt-4 flex flex-col gap-3 lg:flex-row">
-                  <div className="flex min-h-10 flex-1 items-center gap-2 rounded-md border-2 border-[#17201d] bg-white px-3">
-                    <Link2 className="h-4 w-4 text-[#b84a2b]" />
-                    <input
-                      value={imageUrl}
-                      onChange={(event) => setImageUrl(event.target.value)}
-                      placeholder="https://example.com/image.jpg"
-                      className="h-10 w-full bg-transparent outline-none"
-                    />
+                  <div className="mt-4 flex flex-col gap-3 lg:flex-row">
+                    <div className="flex min-h-10 flex-1 items-center gap-2 rounded-md border-2 border-[#17201d] bg-white px-3">
+                      <Link2 className="h-4 w-4 text-[#b84a2b]" />
+                      <input
+                        value={imageUrl}
+                        onChange={(event) => setImageUrl(event.target.value)}
+                        placeholder="https://example.com/image.jpg"
+                        className="h-10 w-full bg-transparent outline-none"
+                      />
+                    </div>
+                    <Button onClick={useImageUrl} className="rounded-md bg-[#17201d]">
+                      <QrCode />
+                      Generate
+                    </Button>
+                    <label className="inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm">
+                      <Upload className="h-4 w-4" />
+                      Local image
+                      <input type="file" accept="image/*" onChange={onImageUpload} hidden />
+                    </label>
                   </div>
-                  <Button onClick={useImageUrl} className="rounded-md bg-[#17201d]">
-                    <QrCode />
-                    Generate
-                  </Button>
-                  <label className="inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm">
-                    <Upload className="h-4 w-4" />
-                    Local image
-                    <input type="file" accept="image/*" onChange={onImageUpload} hidden />
-                  </label>
-                </div>
-                <p className="mt-3 text-sm text-[#62736d]">
-                  {localImageName
-                    ? `${localImageName} was encoded as a local data URL. Good for testing, not for public sharing.`
-                    : 'Public image QR codes should encode a hosted URL, not a private local file path.'}
-                </p>
-              </article>
+                  <p className="mt-3 text-sm text-[#62736d]">
+                    {localImageName
+                      ? `${localImageName} was encoded as a local data URL. Good for testing, not for public sharing.`
+                      : 'Public image QR codes should encode a hosted URL, not a private local file path.'}
+                  </p>
+                </article>
+              )}
             </div>
           )}
 
@@ -1738,7 +2158,9 @@ export default function QrCodeImageTool() {
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-lg font-black tracking-normal">Preview & Download</h2>
-                <p className="text-sm text-[#62736d]">Updates as you edit.</p>
+                <p className="text-sm text-[#62736d]">
+                  {data.trim() ? 'Updates as you edit.' : 'Add content to generate your QR code image.'}
+                </p>
               </div>
               {isGenerating && <Loader2 className="h-5 w-5 animate-spin text-[#b84a2b]" />}
             </div>
@@ -1748,7 +2170,12 @@ export default function QrCodeImageTool() {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={previewUrl} alt="Generated QR code image preview" className="h-full w-full object-contain" />
               ) : (
-                <QrCode className="h-16 w-16 text-[#7b6d5a]" />
+                <div className="grid max-w-56 place-items-center gap-3 px-4 text-center">
+                  <QrCode className="h-14 w-14 text-[#7b6d5a]" />
+                  <p className="text-sm font-bold leading-6 text-[#62736d]">
+                    Add content to generate your QR code image.
+                  </p>
+                </div>
               )}
             </div>
 
@@ -1776,17 +2203,136 @@ export default function QrCodeImageTool() {
               </div>
             )}
 
-            <div className="mt-4 grid grid-cols-3 gap-2">
-              <Button onClick={() => download('png')} disabled={!svgText} className="rounded-md bg-[#17201d]">
-                PNG
-              </Button>
-              <Button onClick={() => download('jpg')} disabled={!svgText} variant="outline" className="rounded-md">
-                JPG
-              </Button>
-              <Button onClick={() => download('svg')} disabled={!svgText} variant="outline" className="rounded-md">
-                SVG
-              </Button>
-            </div>
+            <TooltipProvider delayDuration={150}>
+              <div className="mt-4 rounded-md border border-[#d8c9af] bg-white/70 p-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="flex items-center gap-1.5 text-xs font-black uppercase text-[#62736d]">
+                      <Download className="h-3.5 w-3.5 text-[#b84a2b]" />
+                      Download QR code image
+                    </p>
+                    <p className="mt-1 flex items-center gap-1.5 text-sm font-bold text-[#17201d]">
+                      Image size: {style.width}px
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            className="inline-grid h-5 w-5 place-items-center rounded-full border border-[#d8c9af] bg-white text-[#62736d] hover:border-[#17201d] hover:text-[#17201d]"
+                            aria-label="Image size information"
+                          >
+                            <Info className="h-3.5 w-3.5" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-56 bg-[#17201d] text-[#fffaf0]">
+                          QR code images are square, so this controls both width and height.
+                        </TooltipContent>
+                      </Tooltip>
+                    </p>
+                  </div>
+                  {downloadStatus && (
+                    <span className="rounded-full border border-[#17201d] bg-[#f8d36b] px-3 py-1 text-xs font-black text-[#17201d]">
+                      {downloadStatus}
+                    </span>
+                  )}
+                </div>
+
+                <div className="mt-3 grid grid-cols-4 gap-2">
+                  {downloadSizeOptions.map((size) => (
+                    <button
+                      key={size}
+                      type="button"
+                      onClick={() => setStyle((current) => ({ ...current, width: size }))}
+                      className={`h-9 rounded-md border text-xs font-black transition ${style.width === size
+                        ? 'border-[#17201d] bg-[#17201d] text-[#fffaf0]'
+                        : 'border-[#d8c9af] bg-white text-[#17201d] hover:border-[#17201d]'
+                        }`}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+
+                <label className="mt-3 grid gap-1 text-xs font-black uppercase text-[#62736d]">
+                  Custom size
+                  <input
+                    type="number"
+                    min={1}
+                    max={2000}
+                    step={1}
+                    value={style.width}
+                    onChange={(event) => updateDownloadSize(event.target.value)}
+                    className="h-10 rounded-md border-2 border-[#17201d] bg-white px-3 text-sm font-medium normal-case text-[#17201d] outline-none focus:ring-4 focus:ring-[#f8d36b]/50"
+                  />
+                </label>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="mt-3 block">
+                      <Button onClick={() => download('png')} disabled={!svgText} className="w-full rounded-md bg-[#17201d]">
+                        <Download className="h-4 w-4" />
+                        Download PNG
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-56 bg-[#17201d] text-[#fffaf0]">
+                    Best for websites, documents, and everyday sharing.
+                  </TooltipContent>
+                </Tooltip>
+
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="block">
+                        <Button onClick={() => download('svg')} disabled={!svgText} variant="outline" className="w-full rounded-md">
+                          SVG
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-56 bg-[#17201d] text-[#fffaf0]">
+                      Best for print, editing, and scalable vector use.
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="block">
+                        <Button onClick={() => download('jpg')} disabled={!svgText} variant="outline" className="w-full rounded-md">
+                          JPG
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-56 bg-[#17201d] text-[#fffaf0]">
+                      Best for smaller files when transparency is not needed.
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="block">
+                        <Button onClick={() => download('pdf')} disabled={!svgText} variant="outline" className="w-full rounded-md">
+                          <FileText className="h-4 w-4" />
+                          PDF
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-56 bg-[#17201d] text-[#fffaf0]">
+                      Best for printable documents and offline sharing.
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="block">
+                        <Button onClick={printQrImage} disabled={!svgText} variant="outline" className="w-full rounded-md">
+                          <Printer className="h-4 w-4" />
+                          Print
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-56 bg-[#17201d] text-[#fffaf0]">
+                      Print only this QR code image without the page controls.
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              </div>
+            </TooltipProvider>
 
             <Button
               onClick={testGeneratedQr}
@@ -1979,6 +2525,53 @@ export default function QrCodeImageTool() {
   )
 }
 
+function getQrInputCopy(templateId: QrTemplateId) {
+  const copyByTemplate: Partial<Record<QrTemplateId, { label: string; helper: string }>> = {
+    url: {
+      label: 'Enter URL',
+      helper: 'Enter a website, landing page, product page, or online form URL to turn it into a QR code image.'
+    },
+    text: {
+      label: 'Enter text',
+      helper: 'Enter plain text for your QR code image. The text is encoded directly in the QR code.'
+    },
+    email: {
+      label: 'Enter email link',
+      helper: 'Use a mailto link so the QR code image opens a prefilled email on supported devices.'
+    },
+    sms: {
+      label: 'Enter SMS payload',
+      helper: 'Use an SMS payload to open a text message draft on supported mobile devices.'
+    },
+    phone: {
+      label: 'Enter phone link',
+      helper: 'Use a tel: link so the QR code image starts a phone call after scanning.'
+    },
+    bitcoin: {
+      label: 'Enter Bitcoin URI',
+      helper: 'Use a Bitcoin payment URI for wallet handoff and payment testing.'
+    },
+    pdf: {
+      label: 'Enter PDF URL',
+      helper: 'Enter a public PDF URL so the QR code image opens a hosted document.'
+    },
+    image: {
+      label: 'Enter image URL',
+      helper: 'Enter a public image URL so the QR code image opens a hosted screenshot, poster, or gallery asset.'
+    }
+  }
+
+  return copyByTemplate[templateId] ?? {
+    label: 'Enter QR content',
+    helper: 'Enter the content you want to encode in this QR code image.'
+  }
+}
+
+function getDownloadFileName(format: DownloadFormat, templateId: QrTemplateId, width: number) {
+  const typeSlug = templateId === 'twitter' ? 'x' : templateId
+  return `qr-code-image-${typeSlug}-${Math.round(width)}.${format}`
+}
+
 function PanelHeader({
   icon,
   step,
@@ -2092,6 +2685,130 @@ function RangeField({
   )
 }
 
+function VisualChoiceGroup<TValue extends string>({
+  label,
+  description,
+  options,
+  value,
+  onChange,
+  renderPreview
+}: {
+  label: string
+  description: string
+  options: Array<{ value: TValue; label: string }>
+  value: TValue
+  onChange: (value: TValue) => void
+  renderPreview: (option: { value: TValue; label: string }) => ReactNode
+}) {
+  return (
+    <div>
+      <div className="mb-2">
+        <h5 className="text-xs font-black uppercase text-[#62736d]">{label}</h5>
+        <p className="text-xs leading-5 text-[#62736d]">{description}</p>
+      </div>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+        {options.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onChange(option.value)}
+            className={`min-h-24 rounded-md border-2 p-2 text-left transition ${value === option.value
+              ? 'border-[#17201d] bg-[#17201d] text-[#fffaf0] shadow-[3px_3px_0_#b84a2b]'
+              : 'border-[#d8c9af] bg-white text-[#17201d] hover:border-[#17201d]'
+              }`}
+            aria-pressed={value === option.value}
+          >
+            <span className="grid h-12 place-items-center rounded-sm border border-[#d8c9af] bg-[#fffdf7]">
+              {renderPreview(option)}
+            </span>
+            <span className={`mt-2 block truncate text-xs font-black ${value === option.value ? 'text-[#fffaf0]' : 'text-[#17201d]'}`}>
+              {option.label}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function PatternPreview({ shape }: { shape: QrModuleShape }) {
+  const cells = [
+    [0, 0], [2, 0], [4, 0],
+    [1, 1], [3, 1],
+    [0, 2], [2, 2], [4, 2],
+    [1, 3], [3, 3],
+    [0, 4], [2, 4], [4, 4]
+  ]
+
+  return (
+    <svg viewBox="0 0 44 44" className="h-10 w-10" aria-hidden="true">
+      {shape === 'line' && (
+        <>
+          <line x1="6" y1="8" x2="38" y2="8" stroke="#17201d" strokeWidth="4" strokeLinecap="round" />
+          <line x1="6" y1="22" x2="38" y2="22" stroke="#17201d" strokeWidth="4" strokeLinecap="round" />
+          <line x1="6" y1="36" x2="38" y2="36" stroke="#17201d" strokeWidth="4" strokeLinecap="round" />
+        </>
+      )}
+      {shape === 'cross' && cells.slice(0, 9).map(([col, row]) => (
+        <g key={`${col}-${row}`} transform={`translate(${col * 8 + 4} ${row * 8 + 4})`}>
+          <line x1="1" y1="1" x2="7" y2="7" stroke="#17201d" strokeWidth="1.8" strokeLinecap="round" />
+          <line x1="7" y1="1" x2="1" y2="7" stroke="#17201d" strokeWidth="1.8" strokeLinecap="round" />
+        </g>
+      ))}
+      {(shape === 'square' || shape === 'rounded' || shape === 'dot') && cells.map(([col, row]) => {
+        const x = col * 8 + 4
+        const y = row * 8 + 4
+        if (shape === 'dot') return <circle key={`${col}-${row}`} cx={x + 3} cy={y + 3} r="3" fill="#17201d" />
+        return <rect key={`${col}-${row}`} x={x} y={y} width="6" height="6" rx={shape === 'rounded' ? 2 : 0} fill="#17201d" />
+      })}
+    </svg>
+  )
+}
+
+function MarkerPreview({ borderShape, centerShape }: { borderShape: QrMarkerBorderShape; centerShape: QrMarkerCenterShape }) {
+  return (
+    <svg viewBox="0 0 44 44" className="h-10 w-10" aria-hidden="true">
+      {borderShape === 'planet' ? (
+        <>
+          <circle cx="22" cy="22" r="8" fill="#17201d" />
+          <circle cx="22" cy="22" r="16" fill="none" stroke="#17201d" strokeWidth="1.4" strokeDasharray="3 3" />
+          <circle cx="38" cy="22" r="3" fill="#17201d" />
+          <circle cx="6" cy="22" r="3" fill="#17201d" />
+          <circle cx="22" cy="38" r="3" fill="#17201d" />
+          <circle cx="22" cy="6" r="3" fill="#17201d" />
+        </>
+      ) : (
+        <>
+          {borderShape === 'circle' ? (
+            <>
+              <circle cx="22" cy="22" r="18" fill="#17201d" />
+              <circle cx="22" cy="22" r="12" fill="#fffdf7" />
+            </>
+          ) : (
+            <>
+              <rect x="4" y="4" width="36" height="36" rx={borderShape === 'rounded' || borderShape === 'bracket' ? 7 : 0} fill="#17201d" />
+              <rect x="10" y="10" width="24" height="24" rx={borderShape === 'rounded' || borderShape === 'bracket' ? 5 : 0} fill="#fffdf7" />
+            </>
+          )}
+          {centerShape === 'circle' || centerShape === 'dot' ? (
+            <circle cx="22" cy="22" r={centerShape === 'dot' ? 5 : 8} fill="#17201d" />
+          ) : (
+            <rect x="14" y="14" width="16" height="16" rx={centerShape === 'rounded' ? 4 : 0} fill="#17201d" />
+          )}
+          {borderShape === 'bracket' && (
+            <>
+              <path d="M4 13V4h9M31 4h9v9M4 31v9h9M31 40h9v-9" fill="none" stroke="#17201d" strokeWidth="3" />
+            </>
+          )}
+          {borderShape === 'dsj' && (
+            <path d="M4 14V4h10M30 4h10v10M4 30v10h10M30 40h10V30" fill="none" stroke="#17201d" strokeWidth="4" />
+          )}
+        </>
+      )}
+    </svg>
+  )
+}
+
 function positioningToFinderShape(positioningPointType: QrPositioningPointType): QrFinderShape {
   if (positioningPointType === 'dsj') return 'bracket'
   if (positioningPointType === 'rounded') return 'rounded'
@@ -2101,6 +2818,39 @@ function positioningToFinderShape(positioningPointType: QrPositioningPointType):
 function finderShapeToPositioning(finderShape: QrFinderShape): QrPositioningPointType {
   if (finderShape === 'bracket') return 'rounded'
   return finderShape
+}
+
+function positioningToMarkerBorder(positioningPointType: QrPositioningPointType, finderShape: QrFinderShape): QrMarkerBorderShape {
+  if (finderShape === 'bracket') return 'bracket'
+  if (positioningPointType === 'dsj') return 'dsj'
+  return positioningPointType
+}
+
+function markerBorderToPositioning(markerBorderShape: QrMarkerBorderShape): QrPositioningPointType {
+  if (markerBorderShape === 'bracket') return 'rounded'
+  if (markerBorderShape === 'dsj') return 'dsj'
+  return markerBorderShape
+}
+
+function markerBorderToFinderShape(markerBorderShape: QrMarkerBorderShape): QrFinderShape {
+  if (markerBorderShape === 'dsj') return 'bracket'
+  return markerBorderShape
+}
+
+function getDefaultMarkerCenterShape(markerBorderShape: QrMarkerBorderShape): QrMarkerCenterShape {
+  if (markerBorderShape === 'circle' || markerBorderShape === 'planet') return 'circle'
+  if (markerBorderShape === 'rounded' || markerBorderShape === 'bracket') return 'rounded'
+  return 'square'
+}
+
+function syncStyleForMarkerBorder(current: StyledQrStyle, markerBorderShape: QrMarkerBorderShape): StyledQrStyle {
+  return {
+    ...current,
+    markerBorderShape,
+    positioningPointType: markerBorderToPositioning(markerBorderShape),
+    finderShape: markerBorderToFinderShape(markerBorderShape),
+    markerCenterShape: current.markerCenterShape ?? getDefaultMarkerCenterShape(markerBorderShape)
+  }
 }
 
 function syncStyleForModuleShape(current: StyledQrStyle, moduleShape: QrModuleShape): StyledQrStyle {
