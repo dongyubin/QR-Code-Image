@@ -9,19 +9,19 @@
     "links": [
       {
         "name": "扫描",
-        "href": "#scanner"
+        "href": "/#scanner"
       },
       {
         "name": "生成",
-        "href": "#generator"
+        "href": "/#generator"
       },
       {
         "name": "类型",
-        "href": "#qr-code-types"
+        "href": "/#qr-code-types"
       },
       {
         "name": "批量",
-        "href": "#batch"
+        "href": "/#batch"
       },
       {
         "name": "博客",
@@ -29,7 +29,7 @@
       },
       {
         "name": "FAQ",
-        "href": "#faq"
+        "href": "/#faq"
       }
     ]
   },
@@ -63,15 +63,15 @@
           "title": "工具",
           "links": [
             {
-              "href": "#scanner",
+              "href": "/#scanner",
               "name": "扫描二维码图片"
             },
             {
-              "href": "#generator",
+              "href": "/#generator",
               "name": "生成二维码图片"
             },
             {
-              "href": "#batch",
+              "href": "/#batch",
               "name": "批量导出"
             }
           ]
@@ -80,15 +80,15 @@
           "title": "资源",
           "links": [
             {
-              "href": "#qr-code-types",
+              "href": "/#qr-code-types",
               "name": "二维码类型"
             },
             {
-              "href": "#features",
+              "href": "/#features",
               "name": "功能"
             },
             {
-              "href": "#faq",
+              "href": "/#faq",
               "name": "FAQ"
             }
           ]

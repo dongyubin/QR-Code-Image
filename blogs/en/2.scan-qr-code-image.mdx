@@ -8,6 +8,13 @@ visible: published
 pin: false
 ---
 
+<ToolCta
+  href="/#scanner"
+  title="Scan a QR Code Image Now"
+  description="Upload, drag, or paste a screenshot or photo. Your QR code image is decoded locally in your browser."
+  action="Open the scanner"
+/>
+
 ## Why Scan a QR Code Image?
 
 People often receive QR codes as screenshots, photos, PDFs, chat images, or downloaded files. Instead of using a phone camera on another screen, a browser-based scanner can read the QR code image directly from an upload.
@@ -25,6 +32,8 @@ Use this workflow when decoding a QR code image:
 5. If the scanner fails, crop closer to the QR code and try again.
 
 A good scanner should handle PNG, JPG, JPEG, and common screenshot formats. For privacy, browser-first scanning is preferable because the image can be decoded locally without uploading it to a server.
+
+[Open the QR code image scanner](/#scanner) to upload your screenshot or photo and check the decoded result immediately.
 
 ## Why a QR Code Image May Not Be Detected
 
@@ -66,7 +75,7 @@ Do not only test the live preview. Test the exact PNG, JPG, or SVG-derived file 
 
 ## How to Create QR Code Images That Scan Reliably
 
-If you are creating the QR code image yourself, start with these settings:
+If you are creating the QR code image yourself, read the [QR code image creation guide](/blog/qr-code-image) and start with these settings:
 
 - Error correction: Q or H.
 - Quiet zone: at least 2 modules, preferably more for print.
@@ -100,3 +109,10 @@ PNG is usually safer. JPG can work, but compression artifacts may reduce readabi
 ### Can a QR code image be too stylish?
 
 Yes. If decoration weakens the finder markers, timing pattern, quiet zone, or module contrast, scanners may fail even if the code looks visually clear to humans.
+
+<ToolCta
+  href="/#scanner"
+  title="Test Your QR Code Image"
+  description="Upload the final screenshot, PNG, or JPG and confirm what the QR code contains before you share it."
+  action="Scan this QR image"
+/>

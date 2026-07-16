@@ -9,19 +9,19 @@
     "links": [
       {
         "name": "スキャン",
-        "href": "#scanner"
+        "href": "/#scanner"
       },
       {
         "name": "作成",
-        "href": "#generator"
+        "href": "/#generator"
       },
       {
         "name": "タイプ",
-        "href": "#qr-code-types"
+        "href": "/#qr-code-types"
       },
       {
         "name": "一括",
-        "href": "#batch"
+        "href": "/#batch"
       },
       {
         "name": "ブログ",
@@ -29,7 +29,7 @@
       },
       {
         "name": "FAQ",
-        "href": "#faq"
+        "href": "/#faq"
       }
     ]
   },
@@ -63,15 +63,15 @@
           "title": "ツール",
           "links": [
             {
-              "href": "#scanner",
+              "href": "/#scanner",
               "name": "QR画像をスキャン"
             },
             {
-              "href": "#generator",
+              "href": "/#generator",
               "name": "QR画像を作成"
             },
             {
-              "href": "#batch",
+              "href": "/#batch",
               "name": "一括エクスポート"
             }
           ]
@@ -80,15 +80,15 @@
           "title": "リソース",
           "links": [
             {
-              "href": "#qr-code-types",
+              "href": "/#qr-code-types",
               "name": "QRコードタイプ"
             },
             {
-              "href": "#features",
+              "href": "/#features",
               "name": "機能"
             },
             {
-              "href": "#faq",
+              "href": "/#faq",
               "name": "FAQ"
             }
           ]

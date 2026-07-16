@@ -859,11 +859,19 @@ export default function QrCodeImageTool() {
 
   useEffect(() => {
     const syncTabFromHash = () => {
-      if (window.location.hash === '#scanner') setActiveTab('scan')
-      if (window.location.hash === '#generator' || window.location.hash === '#image-to-qr') {
-        setActiveTab('create')
-      }
-      if (window.location.hash === '#batch') setActiveTab('batch')
+      const hash = window.location.hash
+      let nextTab: ToolTab | null = null
+
+      if (hash === '#scanner') nextTab = 'scan'
+      if (hash === '#generator' || hash === '#image-to-qr') nextTab = 'create'
+      if (hash === '#batch') nextTab = 'batch'
+
+      if (!nextTab) return
+
+      setActiveTab(nextTab)
+      window.requestAnimationFrame(() => {
+        document.getElementById('workspace')?.scrollIntoView({ block: 'start' })
+      })
     }
 
     syncTabFromHash()

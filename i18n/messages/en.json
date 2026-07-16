@@ -9,19 +9,19 @@
     "links": [
       {
         "name": "Scan",
-        "href": "#scanner"
+        "href": "/#scanner"
       },
       {
         "name": "Generate",
-        "href": "#generator"
+        "href": "/#generator"
       },
       {
         "name": "Types",
-        "href": "#qr-code-types"
+        "href": "/#qr-code-types"
       },
       {
         "name": "Batch",
-        "href": "#batch"
+        "href": "/#batch"
       },
       {
         "name": "Blog",
@@ -29,7 +29,7 @@
       },
       {
         "name": "FAQ",
-        "href": "#faq"
+        "href": "/#faq"
       }
     ]
   },
@@ -63,15 +63,15 @@
           "title": "Tools",
           "links": [
             {
-              "href": "#scanner",
+              "href": "/#scanner",
               "name": "Scan QR image"
             },
             {
-              "href": "#generator",
+              "href": "/#generator",
               "name": "Create QR image"
             },
             {
-              "href": "#batch",
+              "href": "/#batch",
               "name": "Batch export"
             }
           ]
@@ -80,15 +80,15 @@
           "title": "Resources",
           "links": [
             {
-              "href": "#qr-code-types",
+              "href": "/#qr-code-types",
               "name": "QR Code Types"
             },
             {
-              "href": "#features",
+              "href": "/#features",
               "name": "Features"
             },
             {
-              "href": "#faq",
+              "href": "/#faq",
               "name": "FAQ"
             }
           ]
